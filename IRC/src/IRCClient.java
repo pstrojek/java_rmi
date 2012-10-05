@@ -2,26 +2,73 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
+
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.rmi.Naming;
 
 /**
  *
  * @author Darek
  */
-public class ChatClient extends javax.swing.JFrame {
+public class IRCClient extends javax.swing.JFrame {
 
-    private ChatInterface chat;
-    
+    private class HistoryObtainer extends Thread {
+
+        public void run() {
+
+            while (true) {
+
+                try {
+                    IRCInterface remoteObject = (IRCInterface) Naming.lookup("//localhost:1399/Chat");
+                    String history = remoteObject.read();
+                    jTextArea1.setText(history);
+                    HistoryObtainer.sleep(10);
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.toString());
+                }
+
+            }
+
+        }
+    }
+    private HistoryObtainer historyObtainer = new HistoryObtainer();
+    private IRCInterface chat;
+    private String username = "";
+
     /**
      * Creates new form ChatClient
      */
-    public ChatClient() {
+    public IRCClient() {
         initComponents();
-        
+
+        setTitle("IRC");
+
+        addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                try {
+                    chat.writeString("Użytkownik " + username + " opuścił kanał.");
+                } catch (Exception ex) {
+                    System.out.println("Error: " + ex.toString());
+                }
+                System.exit(0);
+            }
+        });
+
+        username = javax.swing.JOptionPane.showInputDialog(null,
+                "Identyfikacja użytkownika",
+                "Podaj imię",
+                javax.swing.JOptionPane.QUESTION_MESSAGE);
+
         try {
-            chat = (ChatInterface) Naming.lookup("//localhost:1399/Chat");
+            chat = (IRCInterface) Naming.lookup("//localhost:1399/Chat");
+
+            chat.writeString("Użytkownik " + username + " dołączył do kanału.");
+
+            historyObtainer = new HistoryObtainer();
+            historyObtainer.start();
         } catch (Exception e) {
-            
+            System.out.println("Error: " + e.toString());
         }
     }
 
@@ -88,11 +135,10 @@ public class ChatClient extends javax.swing.JFrame {
 
     private void submitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_submitActionPerformed
         try {
-            chat.write(jTextArea2.getText());
-            jTextArea1.setText(chat.read());
+            chat.writeUser(username, jTextArea2.getText());
             jTextArea2.setText("");
         } catch (Exception e) {
-            
+            System.out.println("Error: " + e.toString());
         }
     }//GEN-LAST:event_submitActionPerformed
 
@@ -113,20 +159,20 @@ public class ChatClient extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(ChatClient.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(IRCClient.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(ChatClient.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(IRCClient.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(ChatClient.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(IRCClient.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(ChatClient.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(IRCClient.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new ChatClient().setVisible(true);
+                new IRCClient().setVisible(true);
             }
         });
     }
@@ -138,4 +184,3 @@ public class ChatClient extends javax.swing.JFrame {
     private javax.swing.JScrollPane window;
     // End of variables declaration//GEN-END:variables
 }
-
